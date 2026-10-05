@@ -1,0 +1,189 @@
+//
+//  main.cpp
+//  CS_210
+//
+//  Created by Personal on 9/2/26.
+//
+
+#include <iostream>
+#include <string>
+#include <cstdlib>
+#include <ctime>
+using namespace std;
+
+struct Property {
+    string name;
+    int cost;
+    string owner;
+    Property* next;
+
+    Property(string n, int c) : name(n), cost(c), owner("None"), next(nullptr) {}
+};
+
+class MonopolyBoard {
+private:
+    Property* head;
+    int size;
+
+public:
+    MonopolyBoard() : head(nullptr), size(0) {}
+
+    ~MonopolyBoard() {
+        if (!head) return;
+        Property* current = head->next;
+        while (current != head) {
+            Property* temp = current;
+            current = current->next;
+            delete temp;
+        }
+        delete head;
+    }
+
+    void addProperty(const string& name, int cost) {
+        Property* newProp = new Property(name, cost);
+        if (!head) {
+            head = newProp;
+            head->next = head;
+        } else {
+            Property* temp = head;
+            while (temp->next != head) {
+                temp = temp->next;
+            }
+            temp->next = newProp;
+            newProp->next = head;
+        }
+        size++;
+    }
+
+    Property* searchProperty(const string& name) const {
+        if (!head) return nullptr;
+        Property* temp = head;
+        do {
+            if (temp->name == name) return temp;
+            temp = temp->next;
+        } while (temp != head);
+        return nullptr;
+    }
+
+    bool removeProperty(const string& name) {
+        if (!head) return false;
+
+        Property* current = head;
+        Property* prev = nullptr;
+
+        Property* tail = head;
+        while (tail->next != head) {
+            tail = tail->next;
+        }
+
+        do {
+            if (current->name == name) {
+                if (current == head && current == tail) {
+                    head = nullptr;
+                } else {
+                    if (current == head) head = head->next;
+                    prev ? prev->next = current->next : tail->next = head;
+                }
+                delete current;
+                size--;
+                return true;
+            }
+            prev = current;
+            current = current->next;
+        } while (current != head);
+
+        return false;
+    }
+
+    void printBoard() const {
+        if (!head) {
+            cout << "Board is empty.\n";
+            return;
+        }
+        Property* temp = head;
+        cout << "\n=== MONOPOLY BOARD (" << size << " Properties) ===\n";
+        do {
+            cout << "- " << temp->name << " [Cost: $" << temp->cost
+                      << " | Owner: " << temp->owner << "]\n";
+            temp = temp->next;
+        } while (temp != head);
+        cout << "=====================================\n\n";
+    }
+
+    Property* getHead() const { return head; }
+};
+
+struct Player {
+    string name;
+    int money;
+    Property* currentPosition;
+
+    Player(string n, int m, Property* start) : name(n), money(m), currentPosition(start) {}
+
+    void move(int steps) {
+        cout << name << " rolled a " << steps << ".\n";
+        for (int i = 0; i < steps; ++i) {
+            currentPosition = currentPosition->next;
+        }
+        cout << name << " landed on " << currentPosition->name << ".\n";
+    }
+
+    void evaluateSpace() {
+        if (currentPosition->owner == "None") {
+            if (money >= currentPosition->cost) {
+                money -= currentPosition->cost;
+                currentPosition->owner = name;
+                cout << "  -> " << name << " bought " << currentPosition->name
+                          << " for $" << currentPosition->cost << "!\n";
+            } else {
+                cout << "  -> " << name << " cannot afford " << currentPosition->name
+                          << " (Has $" << money << ", Cost $" << currentPosition->cost << ").\n";
+            }
+        } else {
+            cout << "  -> " << currentPosition->name << " is owned by "
+                      << currentPosition->owner << ". No action taken.\n";
+        }
+    }
+};
+
+int main() {
+    srand(static_cast<unsigned int>(time(nullptr)));
+
+    MonopolyBoard board;
+    board.addProperty("Go", 0);
+    board.addProperty("Mediterranean Ave", 60);
+    board.addProperty("Baltic Ave", 60);
+    board.addProperty("Reading Railroad", 200);
+    board.addProperty("Vermont Ave", 100);
+    board.addProperty("Connecticut Ave", 120);
+    board.addProperty("St. Charles Place", 140);
+    board.addProperty("States Ave", 140);
+    board.addProperty("Boardwalk", 400);
+    board.addProperty("Park Place", 350);
+
+    board.printBoard();
+
+    Player p1("Alice", 500, board.getHead());
+    Player p2("Bob", 500, board.getHead());
+
+    cout << "--- STARTING 10-TURN SIMULATION ---\n";
+    for (int turn = 1; turn <= 10; ++turn) {
+        cout << "\n--- TURN " << turn << " ---\n";
+
+        int diceRoll1 = (rand() % 6) + 1;
+        p1.move(diceRoll1);
+        p1.evaluateSpace();
+
+        int diceRoll2 = (rand() % 6) + 1;
+        p2.move(diceRoll2);
+        p2.evaluateSpace();
+    }
+
+    cout << "\n--- GAME OVER ---";
+    board.printBoard();
+    cout << "Final Balances:\n";
+    cout << "- " << p1.name << ": $" << p1.money << "\n";
+    cout << "- " << p2.name << ": $" << p2.money << "\n";
+
+    return 0;
+}
